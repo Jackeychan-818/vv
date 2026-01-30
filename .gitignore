@@ -1,0 +1,11 @@
+.DS_Store
+/debug.py
+/grid
+/grids_check.py
+/nc.py
+/results
+/results_debug_coverage
+/test_grids_check.py
+/weather_cyano_chloro
+raw_data/
+*.csv

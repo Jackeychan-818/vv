@@ -1,0 +1,89 @@
+================================================================================
+VISIBILITY DATA PROCESSING METHODOLOGY NOTES
+Script: vv.py
+================================================================================
+
+OVERVIEW
+--------
+This script processes raw ICOADS (International Comprehensive Ocean-Atmosphere
+Data Set) visibility observations and maps them onto a predefined spatial grid.
+The goal is to produce daily gridded visibility data at two resolutions.
+
+
+DATA SOURCE
+-----------
+- Input: NetCDF files from ICOADS containing ship/buoy observations
+- Variable of interest: VV (visibility code)
+- Valid codes: 90-99 (WMO visibility codes representing different visibility ranges)
+- Years processed: 2018-2024
+
+
+SPATIAL MATCHING METHOD 
+-------------------------------------------------------
+The script uses NEAREST-NEIGHBOR MATCHING:
+
+1. For each year, a predefined grid of target locations is loaded from CSV files
+   (grid_lon, grid_lat, date)
+
+2. A KD-Tree spatial index is built for each unique date's grid points
+
+3. For each raw observation (lon, lat):
+   - Query the KD-Tree to find the SINGLE closest grid point
+   - Assign that observation to the nearest grid cell
+   - This is Euclidean distance in (lon, lat) space
+
+
+AGGREGATION METHOD
+--------------------------------
+When multiple observations fall into the same grid cell on the same day:
+
+Step 1: Count observations per visibility category
+   - Group by (grid_lon, grid_lat, date, vis_cat)
+   - Count how many observations fall into each category
+
+Step 2: Determine DOMINANT visibility
+   - Select the visibility category with the HIGHEST count
+   - Tie-breaker: if counts are equal, choose the LOWER visibility code
+
+Result: Each (grid_lon, grid_lat, date) gets ONE dominant visibility category
+
+
+COARSE GRID AGGREGATION (0.5 DEGREE)
+------------------------------------
+After the fine-grid processing, results are further aggregated to 0.5° cells:
+
+1. Map each fine grid point to nearest 0.5° cell:
+   longitude_interpolated = round(grid_lon / 0.5) * 0.5
+   latitude_interpolated  = round(grid_lat / 0.5) * 0.5
+
+2. Aggregate using WEIGHTED VOTING:
+   - Weight = n_obs (number of original observations at each fine grid point)
+   - Sum weights for each visibility category within the 0.5° cell
+   - Choose the category with highest total weight
+   - Tie-breaker: lower visibility code wins
+
+
+OUTPUT COLUMNS
+--------------
+- grid_lon, grid_lat: Fine grid coordinates (from input grid CSV)
+- date: Observation date
+- dominant_vis_cat: Most frequent visibility code at fine grid (90-99)
+- n_obs: Number of raw observations matched to this grid point
+- longitude_interpolated, latitude_interpolated: Coarse 0.5° grid coordinates
+- visibility_0.5degree: Dominant visibility at coarse grid level
+
+
+
+VISIBILITY CODE REFERENCE (WMO Codes 90-99)
+-------------------------------------------
+90: <50m        94: 1-2 km      98: 10-20 km
+91: 50-200m     95: 2-4 km      99: 20-50 km
+92: 200-500m    96: 4-10 km
+93: 500m-1km    97: 10-20 km
+
+Lower codes = worse visibility (fog, haze, precipitation)
+Higher codes = better visibility (clear conditions)
+
+================================================================================
+Generated: 2026-01-30
+================================================================================
