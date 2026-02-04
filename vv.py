@@ -130,7 +130,7 @@ for year in YEARS:
             if df.empty:
                 continue
 
-            # ---- Option A: aggregate counts per category in THIS file ----
+            # ---- aggregate counts per category in THIS file ----
             df["vis_cat"] = df["VV"]
 
             counts = (
